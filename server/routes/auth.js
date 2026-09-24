@@ -1,77 +1,48 @@
 const express = require('express');
 const bcrypt = require('bcryptjs');
 const db = require('../db');
-const { HttpError, now, tx, str, CATEGORIES } = require('../lib');
+const { HttpError, tx } = require('../lib');
 const { setSession, clearSession, authenticate, rateLimit } = require('../auth');
-const { resolveLocation } = require('../geo');
+const { validEmail, validPassword, validateProfile, createUser, afterSignup } = require('../profile');
 const { userOut } = require('../serialize');
+const { googleEnabled } = require('./oauth');
+const cfg = require('../config');
 
 const router = express.Router();
-const ROLES = ['DONOR', 'RECIPIENT', 'DRIVER'];
-const EMAIL_RE = /^[^\s@]+@[^\s@]+\.[^\s@]{2,}$/;
-// Constant-time-ish dummy so unknown emails cost the same as wrong passwords.
+// Comparing against a real hash makes an unknown email cost the same as a wrong password,
+// so response timing does not reveal which accounts exist.
 const DUMMY_HASH = bcrypt.hashSync('not-a-real-password', 10);
 
-router.post('/register', rateLimit(20, 15 * 60 * 1000), async (req, res) => {
-  const b = req.body || {};
-  const name = str(b.name, 'Name', { min: 2, max: 100 });
-  const email = str(b.email, 'Email', { max: 200 }).toLowerCase();
-  if (!EMAIL_RE.test(email)) throw new HttpError(400, 'Invalid email address');
-  const password = typeof b.password === 'string' ? b.password : '';
-  if (password.length < 8 || password.length > 128) {
-    throw new HttpError(400, 'Password must be 8-128 characters');
-  }
-  if (!ROLES.includes(b.role)) throw new HttpError(400, 'Role must be DONOR, RECIPIENT or DRIVER');
-  const phone = str(b.phone, 'Phone', { min: 5, max: 30, required: false });
-  const address = str(b.address, 'Location', { min: 2, max: 300 });
-
-  let org, capacity, need, types;
-  if (b.role === 'RECIPIENT') {
-    org = str(b.organizationName, 'Organization name', { min: 2, max: 120 });
-    capacity = Number(b.capacity);
-    if (!Number.isInteger(capacity) || capacity < 1 || capacity > 100000) {
-      throw new HttpError(400, 'Capacity must be a whole number of meals between 1 and 100000');
-    }
-    need = ['LOW', 'MEDIUM', 'HIGH'].includes(b.currentNeed) ? b.currentNeed : 'MEDIUM';
-    types = Array.isArray(b.acceptedFoodTypes) ? b.acceptedFoodTypes : [];
-    if (!types.every((t) => CATEGORIES.includes(t))) throw new HttpError(400, 'Invalid food type preference');
-  }
-
-  const loc = await resolveLocation({ address, lat: b.lat, lng: b.lng });
-  const hash = await bcrypt.hash(password, 10);
-
-  const userId = tx(() => {
-    if (db.prepare('SELECT 1 FROM users WHERE email = ?').get(email)) {
-      throw new HttpError(409, 'An account with this email already exists');
-    }
-    const t = now();
-    const r = db
-      .prepare(
-        'INSERT INTO users (name,email,password_hash,role,phone,address,lat,lng,created_at,updated_at) VALUES (?,?,?,?,?,?,?,?,?,?)'
-      )
-      .run(name, email, hash, b.role, phone, address, loc.lat, loc.lng, t, t);
-    const id = Number(r.lastInsertRowid);
-    if (b.role === 'RECIPIENT') {
-      db.prepare(
-        'INSERT INTO recipients (user_id, organization_name, capacity, current_need, accepted_food_types, created_at) VALUES (?,?,?,?,?,?)'
-      ).run(id, org, capacity, need, JSON.stringify([...new Set(types)]), t);
-    }
-    return id;
-  });
-
-  setSession(res, userId);
-  res.status(201).json({ user: userOut(db.prepare('SELECT * FROM users WHERE id=?').get(userId)) });
+// Lets the frontend show the Google button only when the server is actually configured for it.
+router.get('/config', (req, res) => {
+  res.json({ google: googleEnabled() });
 });
 
-router.post('/login', rateLimit(10, 15 * 60 * 1000), async (req, res) => {
+router.post('/register', rateLimit(cfg.LOGIN_ATTEMPTS, cfg.LOGIN_WINDOW_MIN * 60 * 1000), async (req, res) => {
+  const email = validEmail(req.body?.email);
+  const password = validPassword(req.body?.password);
+  const profile = await validateProfile(req.body);
+  const passwordHash = await bcrypt.hash(password, 10);
+
+  const userId = await tx(() => createUser({ profile, email, passwordHash }));
+  await afterSignup(profile);
+  setSession(res, userId);
+  res.status(201).json({ user: await userOut(await db.get('SELECT * FROM users WHERE id = ?', [userId])) });
+});
+
+router.post('/login', rateLimit(cfg.LOGIN_ATTEMPTS, cfg.LOGIN_WINDOW_MIN * 60 * 1000), async (req, res) => {
   const b = req.body || {};
   const email = typeof b.email === 'string' ? b.email.trim().toLowerCase() : '';
   const password = typeof b.password === 'string' ? b.password : '';
-  const user = email ? db.prepare('SELECT * FROM users WHERE email = ?').get(email) : null;
-  const ok = await bcrypt.compare(password, user ? user.password_hash : DUMMY_HASH);
-  if (!user || !ok) throw new HttpError(401, 'Invalid email or password');
+  const user = email ? await db.get('SELECT * FROM users WHERE email = ?', [email]) : null;
+
+  const ok = await bcrypt.compare(password, user && user.password_hash ? user.password_hash : DUMMY_HASH);
+  if (!user || !user.password_hash || !ok) {
+    // A Google-only account has no password; say so without confirming the address exists.
+    throw new HttpError(401, 'Invalid email or password');
+  }
   setSession(res, user.id);
-  res.json({ user: userOut(user) });
+  res.json({ user: await userOut(user) });
 });
 
 router.post('/logout', (req, res) => {
@@ -79,8 +50,8 @@ router.post('/logout', (req, res) => {
   res.json({ ok: true });
 });
 
-router.get('/me', authenticate, (req, res) => {
-  res.json({ user: userOut(req.user) });
+router.get('/me', authenticate, async (req, res) => {
+  res.json({ user: await userOut(req.user) });
 });
 
 module.exports = router;

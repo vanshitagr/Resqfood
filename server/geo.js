@@ -1,4 +1,5 @@
 const { HttpError } = require('./lib');
+const { AVG_SPEED_KMH } = require('./config');
 
 const R_KM = 6371;
 const rad = (d) => (d * Math.PI) / 180;
@@ -12,13 +13,31 @@ function haversineKm(a, b) {
   return 2 * R_KM * Math.asin(Math.sqrt(h));
 }
 
-const AVG_SPEED_KMH = 28; // urban delivery van, incl. traffic
 const etaMinutes = (km) => Math.max(1, Math.round((km / AVG_SPEED_KMH) * 60));
+
+/**
+ * Lat/lng window that certainly contains every point within `km` of the centre.
+ * Used as an index-backed pre-filter before the exact haversine check, so matching never
+ * has to read recipients on the other side of the country.
+ */
+function boundingBox(lat, lng, km) {
+  const dLat = km / 111.32;
+  // Degrees of longitude shrink towards the poles; guard against division by ~0.
+  const dLng = km / Math.max(1e-6, 111.32 * Math.cos(rad(lat)));
+  return {
+    minLat: lat - dLat,
+    maxLat: lat + dLat,
+    minLng: Math.max(-180, lng - dLng),
+    maxLng: Math.min(180, lng + dLng),
+  };
+}
 
 const validCoord = (lat, lng) =>
   Number.isFinite(lat) && Number.isFinite(lng) && Math.abs(lat) <= 90 && Math.abs(lng) <= 180;
 
-// Offline fallback so the demo works without internet. Longest key wins.
+// Last-resort offline fallback so the demo still works with no internet access. Online
+// geocoding (below) covers the whole world; this table only helps when that call fails.
+// Nothing in the matching logic depends on these entries. Longest key wins.
 const PLACES = {
   'malviya nagar': [26.8549, 75.8243],
   'vaishali nagar': [26.9126, 75.7422],
@@ -110,4 +129,4 @@ async function resolveLocation({ address, lat, lng }) {
   return g;
 }
 
-module.exports = { haversineKm, etaMinutes, resolveLocation, validCoord, AVG_SPEED_KMH };
+module.exports = { haversineKm, etaMinutes, boundingBox, resolveLocation, validCoord, AVG_SPEED_KMH };

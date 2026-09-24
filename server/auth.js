@@ -16,6 +16,7 @@ if (!SECRET) {
 
 const COOKIE = 'token';
 const MAX_AGE_MS = 7 * 24 * 3600 * 1000;
+const isProd = () => process.env.NODE_ENV === 'production';
 
 function readCookie(req, name) {
   const header = req.headers.cookie || '';
@@ -31,7 +32,7 @@ function setSession(res, userId) {
   res.cookie(COOKIE, token, {
     httpOnly: true,
     sameSite: 'lax',
-    secure: process.env.NODE_ENV === 'production',
+    secure: isProd(),
     maxAge: MAX_AGE_MS,
     path: '/',
   });
@@ -39,8 +40,35 @@ function setSession(res, userId) {
 
 const clearSession = (res) => res.clearCookie(COOKIE, { path: '/' });
 
+// Short-lived signed cookies used by the OAuth handshake (CSRF state, pending signup).
+// Same secret, but a distinct `kind` claim so one can never be replayed as the other.
+function setTempCookie(res, name, payload, kind, seconds) {
+  const token = jwt.sign({ ...payload, kind }, SECRET, { expiresIn: seconds });
+  res.cookie(name, token, {
+    httpOnly: true,
+    sameSite: 'lax',
+    secure: isProd(),
+    maxAge: seconds * 1000,
+    path: '/',
+  });
+  return token;
+}
+
+function readTempCookie(req, name, kind) {
+  const raw = readCookie(req, name);
+  if (!raw) return null;
+  try {
+    const payload = jwt.verify(raw, SECRET);
+    return payload.kind === kind ? payload : null;
+  } catch {
+    return null;
+  }
+}
+
+const clearTempCookie = (res, name) => res.clearCookie(name, { path: '/' });
+
 // The role always comes from the database, never from the token or the client.
-function authenticate(req, res, next) {
+async function authenticate(req, res, next) {
   const token = readCookie(req, COOKIE);
   if (!token) return next(new HttpError(401, 'Not authenticated'));
   let payload;
@@ -49,10 +77,14 @@ function authenticate(req, res, next) {
   } catch {
     return next(new HttpError(401, 'Session expired, please log in again'));
   }
-  const user = db.prepare('SELECT * FROM users WHERE id = ?').get(payload.sub);
-  if (!user) return next(new HttpError(401, 'Not authenticated'));
-  req.user = user;
-  next();
+  try {
+    const user = await db.get('SELECT * FROM users WHERE id = ?', [payload.sub]);
+    if (!user) return next(new HttpError(401, 'Not authenticated'));
+    req.user = user;
+    next();
+  } catch (err) {
+    next(err);
+  }
 }
 
 const requireRole = (...roles) => (req, res, next) =>
@@ -60,7 +92,8 @@ const requireRole = (...roles) => (req, res, next) =>
     ? next()
     : next(new HttpError(403, 'You are not allowed to do this'));
 
-// Tiny in-memory limiter for login/register brute force.
+// Tiny in-memory limiter. Enough for a single-process hackathon deployment; a multi-instance
+// deployment would move this to Redis.
 const hits = new Map();
 function rateLimit(max, windowMs) {
   return (req, res, next) => {
@@ -74,5 +107,13 @@ function rateLimit(max, windowMs) {
     next();
   };
 }
+// Bounded cleanup so the map cannot grow forever.
+setInterval(() => {
+  const cutoff = Date.now() - 3600_000;
+  for (const [k, v] of hits) if (!v.some((t) => t > cutoff)) hits.delete(k);
+}, 600_000).unref();
 
-module.exports = { setSession, clearSession, authenticate, requireRole, rateLimit };
+module.exports = {
+  setSession, clearSession, authenticate, requireRole, rateLimit,
+  readCookie, setTempCookie, readTempCookie, clearTempCookie,
+};

@@ -1,0 +1,23 @@
+# Keep the build context small and never ship secrets or local state into the image.
+node_modules
+npm-debug.log*
+
+# Local database, WAL files and screenshots.
+data
+
+# Secrets - the image must get configuration from the platform, never from a baked-in file.
+.env
+.env.*
+!.env.example
+
+.git
+.gitignore
+.claude
+
+# Not needed at runtime.
+tests
+*.md
+!README.md
+Dockerfile
+.dockerignore
+render.yaml
