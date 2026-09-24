@@ -900,6 +900,12 @@
       <div class="grid split">
         <div class="stack">
           <div class="card">
+            <h2 style="font-size:.95rem">Snap a photo <span class="muted small" style="text-transform:none;font-weight:500">(AI auto-fill)</span></h2>
+            <input type="file" id="ai-img" accept="image/*" style="margin-top:12px;display:block">
+            <p class="row" style="margin:12px 0 0"><button type="button" class="btn ghost sm" id="parse-img">Analyze image</button>
+              <span id="parse-img-msg" class="small muted" role="status"></span></p>
+          </div>
+          <div class="card">
             <h2 style="font-size:.95rem">Describe it in your own words <span class="muted small" style="text-transform:none;font-weight:500">(optional)</span></h2>
             <label for="nl" class="visually-hidden">Describe the surplus food</label>
             <textarea id="nl" placeholder="We have around 25 boxes of cooked rice and dal left from today's event. Good for about 2 hours."></textarea>
@@ -974,6 +980,33 @@
       $('#exp').value = localInput(new Date(Date.now() + Number(b.dataset.h) * 3600e3));
       updatePreview();
     }));
+
+    const imgBtn = $('#parse-img');
+    if (imgBtn) imgBtn.addEventListener('click', async () => {
+      const file = $('#ai-img').files[0];
+      if (!file) return toast('Please select an image first', true);
+      $('#parse-img-msg').textContent = 'Analyzing image...';
+      try {
+        const reader = new FileReader();
+        reader.readAsDataURL(file);
+        reader.onload = async () => {
+          const b64 = reader.result;
+          try {
+            const r = await api('/ai/parse-image', { method: 'POST', body: { imageBase64: b64, mimeType: file.type } });
+            const d = r.data;
+            if (d.foodType) $('#ft').value = d.foodType;
+            if (CATS[d.category]) $('#cat').value = d.category;
+            if (d.quantity) $('#qty').value = d.quantity;
+            if (d.unit) $('#unit').value = d.unit;
+            if (d.expiryMinutes) $('#exp').value = localInput(new Date(Date.now() + d.expiryMinutes * 60000));
+            if (d.description) $('#desc').value = d.description;
+            $('#parse-img-msg').textContent = `Filled in (Gemini AI). Urgency ${d.urgency}${d.diet ? ' · ' + d.diet : ''}. Please check the details.`;
+            updatePreview();
+          } catch (e) { $('#parse-img-msg').textContent = e.message; }
+        };
+      } catch (e) { $('#parse-img-msg').textContent = e.message; }
+    });
+
 
     $('#parse').addEventListener('click', async () => {
       const text = $('#nl').value.trim();

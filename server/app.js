@@ -40,7 +40,7 @@ app.use((req, res, next) => {
   next();
 });
 
-app.use(express.json({ limit: '50kb' }));
+app.use(express.json({ limit: '10mb' }));
 
 // CORS: the UI is served from the same origin, so by default NO cross-origin access is granted.
 // Set CORS_ORIGINS (comma-separated) only if a separate frontend host needs API access.

@@ -7,7 +7,7 @@ const { resolveLocation, haversineKm } = require('../geo');
 const { recipientOut, DELIVERY_SQL, deliveryById, deliveryOut, involvedWithRecipient } = require('../serialize');
 const svc = require('../service');
 const ops = require('../deliveryOps');
-const { parseDonationText } = require('../ai');
+const { parseDonationText, parseDonationImage } = require('../ai');
 
 // ---------------------------------------------------------------- recipients
 const recipients = express.Router();
@@ -349,6 +349,12 @@ const ai = express.Router();
 ai.post('/parse-donation', authenticate, requireRole('DONOR'), rateLimit(20, 60 * 1000), async (req, res) => {
   const text = str(req.body?.text, 'Description', { min: 3, max: 1000 });
   res.json(await parseDonationText(text)); // never throws: falls back to the rule-based parser
+});
+
+ai.post('/parse-image', authenticate, requireRole('DONOR'), rateLimit(10, 60 * 1000), async (req, res) => {
+  const { imageBase64, mimeType } = req.body;
+  if (!imageBase64) throw new HttpError(400, 'Missing image');
+  res.json(await parseDonationImage(imageBase64, mimeType));
 });
 
 module.exports = { recipients, deliveries, stats, notifications, ai };
