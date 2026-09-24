@@ -411,6 +411,11 @@ legend { font-weight: 900; font-size: .76rem; text-transform: uppercase; letter-
 .switch label { margin: 0; text-transform: none; letter-spacing: 0; font-size: .9rem; }
 .switch.off { background: var(--amber-l); }
 
+/* ----------------------------------------------------------- gps status */
+.gps-msg { margin: var(--s2) 0 0; font-weight: 700; border-left: 6px solid var(--muted); padding-left: var(--s2); }
+.gps-msg.ok { border-left-color: var(--green); }
+.gps-msg.bad { border-left-color: var(--red); color: var(--red); }
+
 /* --------------------------------------------------------------- filters */
 .filters { display: flex; gap: var(--s2); flex-wrap: wrap; margin: var(--s2) 0 var(--s5); }
 .filters a.chip { text-decoration: none; }

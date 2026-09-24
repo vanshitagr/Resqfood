@@ -456,23 +456,79 @@
         <input id="${id}" value="${esc(initial)}" placeholder="e.g. Malviya Nagar, Jaipur" required aria-describedby="${id}-h">
         <button type="button" class="btn ghost sm" id="${id}-gps" style="white-space:nowrap">📍 Use my location</button>
       </div>
-      <p class="small muted" id="${id}-h">Any city works - we look up the coordinates to measure real distances.</p>`;
+      <p class="small muted" id="${id}-h">Any city works - we look up the coordinates to measure real distances.</p>
+      <p class="small gps-msg" id="${id}-gps-msg" role="status" hidden></p>`;
   }
+  // 1 PERMISSION_DENIED, 2 POSITION_UNAVAILABLE, 3 TIMEOUT. The generic
+  // "could not get your location" hid the only thing that matters: what to do next.
+  const GEO_ERRORS = {
+    1: 'Location is blocked for this site. Allow it from the padlock icon in your address bar, then try again.',
+    2: 'Your device could not work out where it is. Type the address instead.',
+    3: 'Locating took too long. Try again, or type the address instead.',
+  };
+
   // Wires the GPS button; .lat/.lng are set only when exact coordinates are known.
+  //
+  // The coordinates are sent alongside the address text rather than replacing it. The
+  // backend prefers explicit coordinates for distance and routing, so matching still uses
+  // the exact position, while the shelter and driver keep a readable address to navigate
+  // to. Overwriting the field with "Current location (26.9124, 75.7873)" meant whoever
+  // collected the food saw raw numbers instead of somewhere they could find.
   function wireLocation(id) {
-    const c = { lat: null, lng: null };
+    const c = { lat: null, lng: null, accuracy: null };
     const input = $('#' + id);
-    input.addEventListener('input', () => { c.lat = c.lng = null; });
-    $(`#${id}-gps`).addEventListener('click', () => {
-      if (!navigator.geolocation) return toast('Geolocation is not supported by this browser', true);
+    const btn = $(`#${id}-gps`);
+    const msg = $(`#${id}-gps-msg`);
+
+    const say = (text, kind = '') => {
+      msg.hidden = !text;
+      msg.textContent = text;
+      msg.className = 'small gps-msg ' + kind;
+    };
+
+    // Typing a different address invalidates any pinned coordinates.
+    input.addEventListener('input', () => {
+      if (c.lat !== null) { c.lat = c.lng = c.accuracy = null; say(''); }
+    });
+
+    btn.addEventListener('click', () => {
+      // Geolocation needs a secure context. Opening the app over a LAN address such as
+      // http://192.168.1.5:3000 disables it silently in every modern browser, which looks
+      // exactly like the button being broken.
+      if (!navigator.geolocation) return say('This browser cannot share your location. Type the address instead.', 'bad');
+      if (!window.isSecureContext) {
+        return say('Browsers only share location over HTTPS or on localhost. Type the address instead.', 'bad');
+      }
+
+      const label = btn.textContent;
+      btn.disabled = true;
+      btn.textContent = 'Locating…';
+      say('Getting your position…');
+
       navigator.geolocation.getCurrentPosition(
         (p) => {
-          c.lat = p.coords.latitude; c.lng = p.coords.longitude;
-          input.value = `Current location (${c.lat.toFixed(4)}, ${c.lng.toFixed(4)})`;
-          announce('Location set from your device');
+          btn.disabled = false; btn.textContent = label;
+          c.lat = p.coords.latitude;
+          c.lng = p.coords.longitude;
+          c.accuracy = Math.round(p.coords.accuracy);
+          // Keep whatever is already typed; only fill in when the field is empty.
+          const needsLabel = !input.value.trim();
+          if (needsLabel) input.value = 'Pinned location';
+          say(
+            `Pinned to your position, accurate to about ${c.accuracy} m.` +
+            (needsLabel ? ' Add a street or landmark so the driver can find you.' : ' The address above is what the driver will see.'),
+            'ok'
+          );
+          announce('Location pinned from your device');
         },
-        () => toast('Could not get your location - type an address instead', true),
-        { timeout: 8000 }
+        (err) => {
+          btn.disabled = false; btn.textContent = label;
+          c.lat = c.lng = c.accuracy = null;
+          say(GEO_ERRORS[err.code] || 'Could not get your location. Type the address instead.', 'bad');
+        },
+        // High accuracy plus a longer window: a cold GPS fix on a phone regularly needs
+        // more than the 8s this used to allow, which surfaced as a bare timeout error.
+        { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
       );
     });
     return c;
