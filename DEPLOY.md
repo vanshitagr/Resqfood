@@ -1,4 +1,4 @@
-# Deploying Surplus-to-Shelter
+# Deploying ResQFood
 
 The app is a single Node process that serves both the API and the UI, so there is one service
 to deploy — no separate frontend build or host.
@@ -44,12 +44,12 @@ repo).
 ## Docker (Railway, Fly.io, or anywhere else)
 
 ```bash
-docker build -t surplus-to-shelter .
+docker build -t resqfood .
 docker run --rm -p 3000:3000 \
   -e NODE_ENV=production \
   -e JWT_SECRET="$(node -e 'console.log(require("crypto").randomBytes(48).toString("hex"))')" \
   -e DATABASE_URL="postgresql://..." \
-  --init surplus-to-shelter
+  --init resqfood
 ```
 
 `--init` gives the container a proper init process so `SIGTERM` reaches Node and the database

@@ -1,5 +1,5 @@
 {
-  "name": "surplus-to-shelter",
+  "name": "resqfood",
   "version": "1.0.0",
   "description": "AmiHacks Track A - real-time food rescue routing",
   "main": "server/index.js",

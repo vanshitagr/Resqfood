@@ -97,7 +97,7 @@ async function geocode(query) {
       const url =
         'https://nominatim.openstreetmap.org/search?format=json&limit=1&q=' + encodeURIComponent(query);
       const res = await fetch(url, {
-        headers: { 'User-Agent': 'surplus-to-shelter-hackathon/1.0' },
+        headers: { 'User-Agent': 'resqfood-hackathon/1.0' },
         signal: AbortSignal.timeout(3500),
       });
       if (res.ok) {

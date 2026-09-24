@@ -7,7 +7,7 @@ const num = (name, fallback) => {
 };
 
 module.exports = {
-  APP_NAME: process.env.APP_NAME || 'Surplus-to-Shelter',
+  APP_NAME: process.env.APP_NAME || 'ResQFood',
 
   // ---- matching ----------------------------------------------------------
   // Score weights must add up to 100 so the result reads as "x / 100".

@@ -1,4 +1,4 @@
-# Track A — Surplus-to-Shelter: Requirements Audit
+# Track A — ResQFood: Requirements Audit
 
 **Nothing is marked PASS unless it was verified working end to end**, not merely because a file or
 endpoint exists. Evidence is either a named test in `tests/e2e.test.js` (35 backend tests,

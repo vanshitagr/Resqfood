@@ -7,7 +7,7 @@ const port = Number(process.env.PORT) || 3000;
 db.init()
   .then(() => {
     app.listen(port, () => {
-      console.log(`Surplus-to-Shelter running on http://localhost:${port}`);
+      console.log(`ResQFood running on http://localhost:${port}`);
       console.log(`Storage: ${db.describe}`);
     });
   })

@@ -5,7 +5,7 @@
 # that prefers a container.
 services:
   - type: web
-    name: surplus-to-shelter
+    name: resqfood
     runtime: node
     plan: free
     region: singapore # same region as the Supabase project (ap-southeast-1) to keep latency low
@@ -39,7 +39,7 @@ services:
         sync: false
 
       # Optional - Google sign-in. GOOGLE_REDIRECT_URI must match the Google console entry
-      # exactly, e.g. https://surplus-to-shelter.onrender.com/api/auth/google/callback
+      # exactly, e.g. https://resqfood.onrender.com/api/auth/google/callback
       - key: GOOGLE_CLIENT_ID
         sync: false
       - key: GOOGLE_CLIENT_SECRET

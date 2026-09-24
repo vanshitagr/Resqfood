@@ -1,4 +1,4 @@
-# Surplus-to-Shelter (AmiHacks Track A)
+# ResQFood (AmiHacks Track A)
 
 Real-time food rescue routing: a donor posts surplus food → an explainable rule-based matching
 engine picks the best nearby shelter → the NGO confirms → a volunteer driver picks up and
