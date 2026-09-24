@@ -2,17 +2,24 @@
 <html lang="en">
 <head>
   <meta charset="utf-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1">
-  <title>Surplus-to-Shelter</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+  <meta name="theme-color" content="#0A0A0A">
+  <title>ResQFood</title>
   <meta name="description" content="Real-time food rescue routing: surplus food to shelters before it expires.">
-  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 100 100%27><text y=%27.9em%27 font-size=%2790%27>&#127858;</text></svg>">
+  <link rel="icon" href="data:image/svg+xml,<svg xmlns=%27http://www.w3.org/2000/svg%27 viewBox=%270 0 32 32%27><rect width=%2732%27 height=%2732%27 fill=%27%230A0A0A%27/><rect x=%278%27 y=%278%27 width=%2716%27 height=%2716%27 fill=%27%23B8FF3D%27/></svg>">
+  <link rel="preload" href="/fonts/inter-latin-var.woff2" as="font" type="font/woff2" crossorigin>
   <link rel="stylesheet" href="https://unpkg.com/leaflet@1.9.4/dist/leaflet.css">
   <link rel="stylesheet" href="/style.css">
 </head>
 <body>
   <a class="skip" href="#app">Skip to main content</a>
-  <header class="nav" id="nav"></header>
-  <main id="app" class="container" tabindex="-1"></main>
+  <div class="shell">
+    <aside class="sidebar" id="nav" aria-label="Sidebar"></aside>
+    <div class="main-col">
+      <header class="topbar" id="topbar"></header>
+      <main id="app" class="container" tabindex="-1"></main>
+    </div>
+  </div>
   <div id="live" class="visually-hidden" role="status" aria-live="polite"></div>
   <div id="toast" class="toast" role="alert" hidden></div>
   <script src="https://unpkg.com/leaflet@1.9.4/dist/leaflet.js"></script>
