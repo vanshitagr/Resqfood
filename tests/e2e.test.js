@@ -1,5 +1,6 @@
 process.env.NODE_ENV = 'test';
 process.env.DB_PATH = ':memory:';
+delete process.env.DATABASE_URL; // tests always run on a throwaway in-memory SQLite
 process.env.GEOCODE_ONLINE = '0';
 process.env.JWT_SECRET = 'test-secret';
 delete process.env.ANTHROPIC_API_KEY;
