@@ -1,0 +1,10 @@
+{
+  "permissions": {
+    "allow": [
+      "Bash(node -e \"console.log\\(require\\('express/package.json'\\).version\\)\")",
+      "Bash(python -)",
+      "Bash(npm test *)",
+      "Bash(node --check public/app.js)"
+    ]
+  }
+}

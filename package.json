@@ -1,0 +1,20 @@
+{
+  "name": "surplus-to-shelter",
+  "version": "1.0.0",
+  "description": "AmiHacks Track A - real-time food rescue routing",
+  "main": "server/index.js",
+  "scripts": {
+    "start": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server/index.js",
+    "seed": "node --env-file-if-exists=.env --disable-warning=ExperimentalWarning server/seed.js",
+    "test": "node --disable-warning=ExperimentalWarning --test tests/e2e.test.js"
+  },
+  "license": "MIT",
+  "dependencies": {
+    "bcryptjs": "^3.0.3",
+    "express": "^5.2.1",
+    "jsonwebtoken": "^9.0.3"
+  },
+  "devDependencies": {
+    "puppeteer-core": "^25.12.0"
+  }
+}
