@@ -365,9 +365,9 @@
     const me = state.me;
     app.innerHTML = `
       <section class="hero">
-        <h1>Rescue surplus food. Deliver it before it expires.</h1>
+        <h1>Rescue surplus food. <em>Deliver it before it expires.</em></h1>
         <p>Restaurants, caterers and stores post leftovers in seconds. We instantly match them with the best nearby shelter and dispatch a volunteer driver.</p>
-        <div class="row" style="justify-content:center">
+        <div class="row">
           ${me ? `<a class="btn lg" href="${HOME[me.role]}">Go to my dashboard</a>` : `<a class="btn lg" href="#/register">Get started</a><a class="btn ghost lg" href="#/login">Log in</a>`}
           <a class="btn ghost lg" href="#/impact">See our impact</a>
         </div>
