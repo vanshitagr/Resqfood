@@ -16,7 +16,7 @@ const CSP = [
   "default-src 'self'",
   "script-src 'self' https://unpkg.com",
   "style-src 'self' https://unpkg.com 'unsafe-inline'",
-  "img-src 'self' data: blob: https://*.tile.openstreetmap.org https://unpkg.com",
+  "img-src 'self' data: blob: https://*.basemaps.cartocdn.com https://unpkg.com",
   "connect-src 'self' https://router.project-osrm.org",
   "font-src 'self' data:",
   "form-action 'self'",

@@ -473,7 +473,7 @@
     }
     if (state.map) { state.map.remove(); state.map = null; }
     const map = (state.map = L.map(el, { scrollWheelZoom: false }));
-    L.tileLayer('https://tile.openstreetmap.org/{z}/{x}/{y}.png', { attribution: '© OpenStreetMap contributors', maxZoom: 19 }).addTo(map);
+    L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', { attribution: '© OpenStreetMap, © CARTO', maxZoom: 19 }).addTo(map);
     const latlngs = pts.map((p) => [p.lat, p.lng]);
     pts.forEach((p) => {
       const icon = L.divIcon({ className: '', html: `<div class="pin ${p.cls || ''}">${p.icon}</div>`, iconSize: [30, 30], iconAnchor: [15, 15] });
@@ -576,35 +576,19 @@
   function pageLogin(_, params) {
     const oauthError = params.get('error');
     app.innerHTML = `
-      <div class="auth-grid">
-        <form class="card key auth-card" id="f" novalidate>
-          <p class="eyebrow">Access</p>
-          <h1>Log in</h1>
-          ${oauthError ? `<div class="err" role="alert"><div class="err-title">Sign-in problem</div>${esc(OAUTH_ERRORS[oauthError] || 'Sign-in failed. Please try again.')}</div>` : ''}
-          ${googleButton(null, 'Continue with Google')}
-          <label for="email">Email</label>
-          <input id="email" name="email" type="email" required autocomplete="username" aria-describedby="msg">
-          <label for="pw">Password</label>
-          <input id="pw" name="password" type="password" required autocomplete="current-password">
-          <div id="msg"></div>
-          <button class="btn lg block" style="margin-top:16px">Log in</button>
-          <p class="muted small" style="margin:16px 0 0">New here? <a href="#/register">Create an account</a></p>
-        </form>
-        <div class="card demo-box">
-          <p class="eyebrow">Demo access</p>
-          <h2>Demo accounts</h2>
-          <p class="muted">After running <code>npm run seed</code>, the password for all of them is <code>demo1234</code>.</p>
-          <div class="stack">
-            ${[['Donor', 'donor@demo.com'], ['NGO / Shelter', 'ngo@demo.com'], ['Driver', 'driver@demo.com']]
-              .map(([r, e]) => `<div><p class="small muted mono" style="margin:0 0 4px;letter-spacing:.1em;text-transform:uppercase">${r}</p><button type="button" class="chip" data-fill="${e}">Use ${e}</button></div>`).join('')}
-          </div>
-        </div>
-      </div>`;
-    app.querySelectorAll('[data-fill]').forEach((b) => b.addEventListener('click', () => {
-      $('#email').value = b.dataset.fill;
-      $('#pw').value = 'demo1234';
-      $('#pw').focus();
-    }));
+      <form class="card key auth-card" id="f" novalidate>
+        <p class="eyebrow">Access</p>
+        <h1>Log in</h1>
+        ${oauthError ? `<div class="err" role="alert"><div class="err-title">Sign-in problem</div>${esc(OAUTH_ERRORS[oauthError] || 'Sign-in failed. Please try again.')}</div>` : ''}
+        ${googleButton(null, 'Continue with Google')}
+        <label for="email">Email</label>
+        <input id="email" name="email" type="email" required autocomplete="username" aria-describedby="msg">
+        <label for="pw">Password</label>
+        <input id="pw" name="password" type="password" required autocomplete="current-password">
+        <div id="msg"></div>
+        <button class="btn lg block" style="margin-top:16px">Log in</button>
+        <p class="muted small" style="margin:16px 0 0">New here? <a href="#/register">Create an account</a></p>
+      </form>`;
     $('#f').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {
@@ -624,8 +608,10 @@
       <div class="loc-row">
         <input id="${id}" value="${esc(initial)}" placeholder="e.g. Malviya Nagar, Jaipur" required aria-describedby="${id}-h">
         <button type="button" class="btn ghost sm" id="${id}-gps">📍 Use my location</button>
+        <button type="button" class="btn ghost sm" id="${id}-map-btn">🗺️ Pick on map</button>
       </div>
       <p class="small muted" id="${id}-h">Any city works - we look up the coordinates to measure real distances.</p>
+      <div id="${id}-map-picker" style="height:250px; margin-top:8px; display:none; border-radius: 6px; z-index: 0; border: 1px solid var(--border)"></div>
       <p class="small gps-msg" id="${id}-gps-msg" role="status" hidden></p>`;
   }
   // 1 PERMISSION_DENIED, 2 POSITION_UNAVAILABLE, 3 TIMEOUT. The generic
@@ -700,6 +686,51 @@
         { enableHighAccuracy: true, timeout: 20000, maximumAge: 60000 }
       );
     });
+
+    const mapBtn = $(`#${id}-map-btn`);
+    const mapDiv = $(`#${id}-map-picker`);
+    let pickerMap = null;
+    let pickerMarker = null;
+
+    if (mapBtn && mapDiv) {
+      mapBtn.addEventListener('click', () => {
+        if (mapDiv.style.display === 'block') {
+          mapDiv.style.display = 'none';
+          return;
+        }
+        mapDiv.style.display = 'block';
+        if (!pickerMap) {
+          // Default to Jaipur if no location is pinned yet
+          const lat = c.lat || 26.9124;
+          const lng = c.lng || 75.7873;
+          pickerMap = L.map(mapDiv.id).setView([lat, lng], 13);
+          L.tileLayer('https://{s}.basemaps.cartocdn.com/light_all/{z}/{x}/{y}{r}.png', {
+            attribution: '© OpenStreetMap, © CARTO', maxZoom: 19
+          }).addTo(pickerMap);
+
+          pickerMarker = L.marker([lat, lng], { draggable: true }).addTo(pickerMap);
+
+          const updatePin = (latlng) => {
+            pickerMarker.setLatLng(latlng);
+            c.lat = latlng.lat;
+            c.lng = latlng.lng;
+            c.accuracy = null;
+            if (!input.value.trim() || input.value === 'Pinned location') input.value = 'Pinned location';
+            say(`Pinned to map (${c.lat.toFixed(4)}, ${c.lng.toFixed(4)}). Add a street or landmark.`, 'ok');
+          };
+
+          pickerMarker.on('dragend', () => updatePin(pickerMarker.getLatLng()));
+          pickerMap.on('click', (e) => updatePin(e.latlng));
+        } else {
+          pickerMap.invalidateSize();
+          if (c.lat) {
+            pickerMap.setView([c.lat, c.lng], 15);
+            pickerMarker.setLatLng([c.lat, c.lng]);
+          }
+        }
+      });
+    }
+
     return c;
   }
 
@@ -1475,6 +1506,16 @@
       const mins = (sec) => (sec == null ? '—' : sec < 1 ? 'under 1s' : sec < 90 ? `${sec}s` : `${Math.round(sec / 60)} min`);
 
       app.innerHTML = `
+        ${!state.me ? `
+        <div class="card" style="text-align:center; padding:32px 16px; margin-bottom:32px; background:var(--bg-card)">
+          <h2 style="font-size:1.5rem; margin-bottom:8px;">Wanna contribute?</h2>
+          <p class="lede" style="margin-bottom:24px;">Join now or register a shelter to start rescuing food today.</p>
+          <div class="row" style="justify-content:center">
+            <a href="#/register" class="btn lg">Join now</a>
+            <a href="#/register?role=RECIPIENT" class="btn ghost lg">Register a shelter</a>
+          </div>
+        </div>
+        ` : ''}
         <div class="page-head"><div><p class="eyebrow">Impact</p><h1>Impact dashboard</h1>
           <p class="lede">Every figure is calculated from delivery records in the database.</p></div></div>
         <div class="filters" role="group" aria-label="Time period">
@@ -1543,7 +1584,7 @@
 
   // ---------------------------------------------------------------- router
   const routes = [
-    [/^#?\/?$/, pageLanding, null],
+    [/^#?\/?$/, pageImpact, null],
     [/^#\/login$/, pageLogin, null],
     [/^#\/register$/, pageRegister, null],
     [/^#\/complete-profile$/, pageCompleteProfile, null],
