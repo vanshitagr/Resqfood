@@ -240,7 +240,10 @@
          <div class="side-user">
            <div class="su-role">${esc(me.role)}</div>
            <div class="su-name">${esc(me.name)}</div>
-           <button class="btn ghost sm" data-act="logout">Log out</button>
+           <div style="display:flex;gap:4px;margin-top:4px;">
+             <a href="#/profile" class="btn ghost sm">Profile</a>
+             <button class="btn ghost sm" data-act="logout">Log out</button>
+           </div>
          </div>`
       : '';
 
@@ -863,6 +866,57 @@
         toast('Welcome aboard!');
         go(HOME[r.user.role]);
       } catch (err) { $('#msg').innerHTML = errBox(err); }
+    });
+  }
+
+  function pageProfile() {
+    const me = state.me;
+    app.innerHTML = `
+      <div class="page-head"><div><p class="eyebrow">Account</p><h1>Profile</h1>
+      <p class="lede">Update your contact details and location.</p></div></div>
+      <form class="card" id="f" novalidate style="max-width:600px">
+        <div class="form-row">
+          <div><label for="name">Name</label><input id="name" required minlength="2" maxlength="100" value="${esc(me.name)}"></div>
+          <div><label for="phone">Phone</label><input id="phone" type="tel" maxlength="30" value="${esc(me.phone || '')}"></div>
+        </div>
+        ${locationField('loc', me.address || '')}
+        ${me.role === 'RECIPIENT' ? recipientFields() : ''}
+        <div id="msg"></div>
+        <button class="btn lg" style="margin-top:16px">Save changes</button>
+      </form>`;
+    
+    const coords = wireLocation('loc');
+    coords.lat = me.lat;
+    coords.lng = me.lng;
+    
+    if (me.role === 'RECIPIENT') {
+      $('#rec').hidden = false;
+      $('#org').value = me.organizationName || '';
+      $('#cap').value = me.capacity || 50;
+      $('#need').value = me.currentNeed || 'MEDIUM';
+      if (me.acceptedFoodTypes) {
+        me.acceptedFoodTypes.forEach(c => {
+          const cb = app.querySelector(`[name=cat][value=${c}]`);
+          if (cb) cb.checked = true;
+        });
+      }
+    }
+
+    $('#f').addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const body = {
+        name: $('#name').value, phone: $('#phone').value || undefined,
+        address: $('#loc').value, lat: coords.lat ?? undefined, lng: coords.lng ?? undefined,
+      };
+      if (me.role === 'RECIPIENT') Object.assign(body, recipientBody());
+      try {
+        const r = await api('/auth/me', { method: 'PUT', body });
+        state.me = r.user;
+        toast('Profile updated');
+        go(HOME[r.user.role]);
+      } catch (err) {
+        $('#msg').innerHTML = errBox(err);
+      }
     });
   }
 
@@ -1588,6 +1642,7 @@
     [/^#\/login$/, pageLogin, null],
     [/^#\/register$/, pageRegister, null],
     [/^#\/complete-profile$/, pageCompleteProfile, null],
+    [/^#\/profile$/, pageProfile, '*'],
     [/^#\/impact$/, pageImpact, null],
     [/^#\/notifications$/, pageNotifications, '*'],
     [/^#\/donor$/, pageDonor, 'DONOR'],

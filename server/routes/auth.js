@@ -54,4 +54,10 @@ router.get('/me', authenticate, async (req, res) => {
   res.json({ user: await userOut(req.user) });
 });
 
+router.put('/me', authenticate, async (req, res) => {
+  await tx(() => require('../profile').updateProfile(req.user.id, req.body));
+  const user = await db.get('SELECT * FROM users WHERE id = ?', [req.user.id]);
+  res.json({ user: await userOut(user) });
+});
+
 module.exports = router;

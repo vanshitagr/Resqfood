@@ -96,4 +96,28 @@ async function afterSignup(profile) {
   }
 }
 
-module.exports = { ROLES, NEEDS, validEmail, validPassword, validateProfile, createUser, afterSignup };
+async function updateProfile(userId, body) {
+  const user = await db.get('SELECT * FROM users WHERE id = ?', [userId]);
+  if (!user) throw new HttpError(404, 'User not found');
+
+  const b = body || {};
+  b.role = user.role;
+  const profile = await validateProfile(b);
+  const t = now();
+
+  await db.run(
+    `UPDATE users SET name = ?, phone = ?, address = ?, lat = ?, lng = ?, updated_at = ? WHERE id = ?`,
+    [profile.name, profile.phone, profile.address, profile.lat, profile.lng, t, userId]
+  );
+
+  if (profile.role === 'RECIPIENT') {
+    await db.run(
+      `UPDATE recipients SET organization_name = ?, capacity = ?, current_need = ?, accepted_food_types = ? WHERE user_id = ?`,
+      [profile.organizationName, profile.capacity, profile.currentNeed, JSON.stringify(profile.acceptedFoodTypes), userId]
+    );
+    // Run rematch in case capacity/availability changes allow for new donations to be picked up
+    await afterSignup(profile);
+  }
+}
+
+module.exports = { ROLES, NEEDS, validEmail, validPassword, validateProfile, createUser, afterSignup, updateProfile };
