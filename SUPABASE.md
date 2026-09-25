@@ -39,7 +39,7 @@ It is shown once. If it contains `@ : / ? # %`, percent-encode it inside the URL
 echo 'DATABASE_URL=postgresql://postgres.<PROJECT_REF>:PASSWORD@aws-0-ap-southeast-1.pooler.supabase.com:6543/postgres' >> .env
 
 npm run db:check   # connects, creates the schema, round-trips a row, rolls it back
-npm run seed       # demo accounts, now written to Supabase
+npm run db:info    # read-only: shows what is stored (counts and accounts, never password hashes)
 npm start          # start-up prints: Storage: Postgres (aws-0-ap-southeast-1...)
 ```
 

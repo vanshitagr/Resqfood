@@ -111,7 +111,7 @@ test('no application query uses SQLite-only syntax', () => {
 
 test('every INSERT that needs its new id uses db.insert()', () => {
   // db.insert() appends RETURNING id on Postgres; a plain run() would return undefined there.
-  for (const f of ['server/profile.js', 'server/routes/donations.js', 'server/seed.js']) {
+  for (const f of ['server/profile.js', 'server/routes/donations.js']) {
     const text = fs.readFileSync(path.join(__dirname, '..', f), 'utf8');
     if (/INSERT INTO (users|donations)\b/.test(text)) {
       assert.match(text, /db\.insert\(/, `${f} inserts a row whose id is needed`);

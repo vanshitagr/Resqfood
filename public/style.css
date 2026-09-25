@@ -388,14 +388,9 @@ legend { padding: 0 0 var(--s2); margin-bottom: var(--s1); width: 100%; border-b
 @media (max-width: 760px) { .flow { grid-template-columns: minmax(0, 1fr); } .flow .step { border-right: 0; border-bottom: 1px solid var(--border); } .flow .step:last-child { border-bottom: 0; } }
 
 /* -------------------------------------------------------------------- auth */
-.auth-grid { display: grid; grid-template-columns: minmax(0, 480px) minmax(0, 1fr); gap: var(--s5); align-items: start; max-width: 1000px; margin: 0 auto; }
-@media (max-width: 860px) { .auth-grid { grid-template-columns: minmax(0, 1fr); } }
+.auth-solo { max-width: 480px; margin: var(--s5) auto 0; }
 .auth-card { max-width: 640px; margin: 0 auto; width: 100%; }
-.auth-grid .auth-card { margin: 0; }
 .auth-card h1 { margin-bottom: var(--s4); }
-.demo-box .stack > * + * { margin-top: var(--s3); }
-.demo-box h2 { font-size: 1rem; }
-.demo-box .chip { min-height: 36px; }
 
 /* ------------------------------------------------------------------ data lists */
 .kv { display: grid; grid-template-columns: max-content minmax(0, 1fr); gap: var(--s2) var(--s4); margin: 0; }

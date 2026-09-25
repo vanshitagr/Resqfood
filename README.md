@@ -8,41 +8,35 @@ delivers → a live impact dashboard counts the result.
 
 ```bash
 npm install
-npm run seed     # demo accounts across Jaipur, Delhi and Mumbai (password: demo1234)
-npm start        # http://localhost:3000  - migrations run automatically
+npm start        # http://localhost:3000  - the schema is created and migrated automatically
 ```
 
 There is no separate frontend build: the API server also serves the UI from `public/`.
+There are no built-in accounts: open the app and **sign up** as a donor, a shelter/NGO or a driver
+(email + password, or Google if configured).
 
 ```bash
-npm test         # 35 backend end-to-end tests (in-memory DB, no network needed)
+npm test         # 41 backend tests (in-memory DB, no network needed)
 npm run check    # syntax + module load check
-npm run test:ui  # drives the real UI in headless Chrome (needs a running seeded server)
+npm run test:ui  # drives the real UI in headless Chrome against a running server
+npm run db:check # verifies the configured database and reports what is in it
+npm run db:info  # read-only: which database, row counts, registered accounts
 ```
 
 Optional configuration lives in `.env` — see `.env.example`. Only `JWT_SECRET` is required, and
 only in production. The app runs fully with no `.env` at all.
 
-Demo accounts (password `demo1234` for all):
+## Trying the whole flow
 
-| City | Donor | NGO / Shelter | Driver |
-|---|---|---|---|
-| Jaipur | `donor@demo.com`, `donor2@demo.com` | `ngo@demo.com`, `ngo2@demo.com`, `ngo3@demo.com` | `driver@demo.com`, `driver2@demo.com` |
-| Delhi | `donor.delhi@demo.com` | `ngo.delhi@demo.com` | `driver.delhi@demo.com` |
-| Mumbai | `donor.mumbai@demo.com` | `ngo.mumbai@demo.com` | — |
+Open three windows (one normal, two private) and sign up once in each:
+a **donor**, a **shelter / NGO** (set a capacity) and a **driver**. Use nearby locations, because
+distance decides matching.
 
-Three cities are seeded to show the matching is purely geographic: the Delhi donor is never
-matched to a Jaipur shelter 240 km away.
-
-## 3-minute demo script
-
-Open three windows (one normal, two incognito): donor, NGO, driver.
-
-1. **Donor** → *Donate food* → type *"We have around 25 boxes of cooked rice and dal left from
-   today's event. Good for about 2 hours."* → **Auto-fill the form** → **Find best recipient**.
+1. **Donor** → *Post surplus* → type *"We have around 25 boxes of cooked rice and dal left from
+   today's event. Good for about 2 hours."* → **Auto-fill the form** → **Find match**.
    Show the match score, its four-part breakdown and the alternatives.
-2. **NGO** (`ngo@demo.com`) → the match appears under *Awaiting your confirmation* → **Accept**.
-3. **Driver** (`driver@demo.com`) → the task appears → **Accept task** → open the map →
+2. **NGO** → the match appears under *Awaiting your confirmation* → **Accept**.
+3. **Driver** → the task appears → **Accept task** → open the map →
    **Mark picked up** → **Mark delivered**.
 4. **Donor** → the donation page shows DELIVERED with the full lifecycle history.
 5. **Impact** → meals, weight, CO2e and the operational metrics have all moved.

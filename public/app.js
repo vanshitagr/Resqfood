@@ -579,19 +579,21 @@
   function pageLogin(_, params) {
     const oauthError = params.get('error');
     app.innerHTML = `
-      <form class="card key auth-card" id="f" novalidate>
-        <p class="eyebrow">Access</p>
-        <h1>Log in</h1>
-        ${oauthError ? `<div class="err" role="alert"><div class="err-title">Sign-in problem</div>${esc(OAUTH_ERRORS[oauthError] || 'Sign-in failed. Please try again.')}</div>` : ''}
-        ${googleButton(null, 'Continue with Google')}
-        <label for="email">Email</label>
-        <input id="email" name="email" type="email" required autocomplete="username" aria-describedby="msg">
-        <label for="pw">Password</label>
-        <input id="pw" name="password" type="password" required autocomplete="current-password">
-        <div id="msg"></div>
-        <button class="btn lg block" style="margin-top:16px">Log in</button>
-        <p class="muted small" style="margin:16px 0 0">New here? <a href="#/register">Create an account</a></p>
-      </form>`;
+      <div class="auth-solo">
+        <form class="card key auth-card" id="f" novalidate>
+          <p class="eyebrow">Access</p>
+          <h1>Log in</h1>
+          ${oauthError ? `<div class="err" role="alert"><div class="err-title">Sign-in problem</div>${esc(OAUTH_ERRORS[oauthError] || 'Sign-in failed. Please try again.')}</div>` : ''}
+          ${googleButton(null, 'Continue with Google')}
+          <label for="email">Email</label>
+          <input id="email" name="email" type="email" required autocomplete="username" aria-describedby="msg">
+          <label for="pw">Password</label>
+          <input id="pw" name="password" type="password" required autocomplete="current-password">
+          <div id="msg"></div>
+          <button class="btn lg block" style="margin-top:16px">Log in</button>
+          <p class="muted small" style="margin:16px 0 0">New here? <a href="#/register">Create an account</a></p>
+        </form>
+      </div>`;
     $('#f').addEventListener('submit', async (e) => {
       e.preventDefault();
       try {

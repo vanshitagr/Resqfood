@@ -1,3 +1,7 @@
 node_modules
 data
 .env
+
+# A separate clone of this same repository that lives inside the working tree.
+# Ignored so it is never committed or uploaded to a deploy platform.
+/Resqfood/

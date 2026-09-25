@@ -63,11 +63,8 @@ credentials or data. Point your platform's health check at it.
 
 ## After the first deploy
 
-1. Seed the demo accounts (optional, but it makes the app demonstrable immediately):
-   ```bash
-   DATABASE_URL="postgresql://..." npm run seed
-   ```
-   This is idempotent — running it twice creates nothing extra.
+1. Sign up in the deployed app to create your first account. There are no built-in or demo
+   accounts, so a fresh deployment starts empty and nobody has a default password.
 
 2. If you use Google sign-in, add the production callback to the Google console **exactly**:
    `https://<your-domain>/api/auth/google/callback`, and set `GOOGLE_REDIRECT_URI` to the same

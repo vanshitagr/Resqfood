@@ -1,4 +1,9 @@
-// Drives the real UI in headless Chrome against a running, seeded server (npm run seed && npm start).
+// Drives the real UI in headless Chrome against a running server (npm start).
+//
+// There are no seeded or demo accounts, so this registers its own throwaway ones first, through
+// the same public /api/auth/register endpoint a real person uses. Emails carry a timestamp, so
+// repeated runs never collide and nothing has to be cleaned up between runs.
+//
 // Usage: node tests/ui-smoke.js [baseUrl] [screenshotDir]
 const puppeteer = require('puppeteer-core');
 const path = require('path');
@@ -10,11 +15,43 @@ const CHROME = process.env.CHROME_PATH || 'C:/Program Files/Google/Chrome/Applic
 fs.mkdirSync(SHOTS, { recursive: true });
 
 const errors = [];
-const NGO_BY_NAME = {
-  'Hope Shelter': 'ngo@demo.com',
-  'Seva Food Bank': 'ngo2@demo.com',
-  'Asha Kiran Orphanage': 'ngo3@demo.com',
-};
+const PASSWORD = 'ui-smoke-test-password';
+const RUN = Date.now().toString(36); // unique per run, so accounts never clash
+const mail = (who) => `uismoke.${who}.${RUN}@example.test`;
+
+// Three shelters at different distances, capacities and food preferences, so the matching
+// engine has a real choice to make and the "other options" / "why skipped" paths are exercised.
+const NGOS = [
+  { org: 'Hope Shelter', who: 'ngo1', lat: 26.8996, lng: 75.8306, address: 'Raja Park, Jaipur', capacity: 60, need: 'HIGH', types: ['cooked', 'bakery'] },
+  { org: 'Seva Food Bank', who: 'ngo2', lat: 26.8226, lng: 75.7967, address: 'Sanganer, Jaipur', capacity: 300, need: 'MEDIUM', types: [] },
+  { org: 'Asha Kiran Orphanage', who: 'ngo3', lat: 26.9466, lng: 75.7403, address: 'Jhotwara, Jaipur', capacity: 40, need: 'LOW', types: ['cooked', 'dairy', 'produce'] },
+];
+const NGO_BY_NAME = Object.fromEntries(NGOS.map((n) => [n.org, mail(n.who)]));
+
+// Registers an account straight against the API. Uses explicit coordinates so the test never
+// depends on a geocoding service being reachable.
+async function register(body) {
+  const res = await fetch(BASE + '/api/auth/register', {
+    method: 'POST',
+    headers: { 'content-type': 'application/json' },
+    body: JSON.stringify({ password: PASSWORD, ...body }),
+  });
+  if (!res.ok) {
+    const detail = await res.text();
+    throw new Error(`could not register ${body.email}: ${res.status} ${detail.slice(0, 160)}`);
+  }
+}
+
+async function registerAccounts() {
+  await register({ role: 'DONOR', name: 'Rasoi Restaurant', email: mail('donor'), address: 'Malviya Nagar, Jaipur', lat: 26.8549, lng: 75.8243 });
+  await register({ role: 'DRIVER', name: 'Ravi Kumar', email: mail('driver'), address: 'Tonk Road, Jaipur', lat: 26.8697, lng: 75.8009 });
+  for (const n of NGOS) {
+    await register({
+      role: 'RECIPIENT', name: `${n.org} Contact`, email: mail(n.who), address: n.address, lat: n.lat, lng: n.lng,
+      organizationName: n.org, capacity: n.capacity, currentNeed: n.need, acceptedFoodTypes: n.types,
+    });
+  }
+}
 
 async function newPage(browser) {
   const ctx = await browser.createBrowserContext();
@@ -32,7 +69,7 @@ async function login(page, email) {
   await page.goto(BASE + '/#/login');
   await page.waitForSelector('#email');
   await page.type('#email', email);
-  await page.type('#pw', 'demo1234');
+  await page.type('#pw', PASSWORD);
   await page.click('#f button');
   await page.waitForFunction(() => /#\/(donor|recipient|driver)$/.test(location.hash));
 }
@@ -41,12 +78,16 @@ const step = (m) => console.log('•', m);
 const text = (page) => page.evaluate(() => document.body.innerText);
 
 (async () => {
+  await registerAccounts();
+  step(`registered throwaway accounts for this run (suffix .${RUN})`);
   const browser = await puppeteer.launch({ executablePath: CHROME, headless: 'new', args: ['--no-sandbox'] });
   try {
-    // ---- landing + accessibility basics
+    // ---- root page + accessibility basics.
+    // The root route renders the impact dashboard (see the routes table in public/app.js),
+    // so wait for its period filters rather than the old marketing hero.
     const d = await newPage(browser);
     await d.goto(BASE + '/');
-    await d.waitForSelector('.hero');
+    await d.waitForSelector('#app .filters');
     const a11y = await d.evaluate(() => ({
       skip: !!document.querySelector('a.skip'),
       live: !!document.querySelector('[aria-live]'),
@@ -62,7 +103,7 @@ const text = (page) => page.evaluate(() => document.body.innerText);
     await d.screenshot({ path: path.join(SHOTS, '1-landing.png') });
 
     // ---- donor posts a donation using the NL assistant
-    await login(d, 'donor@demo.com');
+    await login(d, mail('donor'));
     step('donor logged in');
     await d.goto(BASE + '/#/donor/new');
     await d.waitForSelector('#nl');
@@ -122,7 +163,7 @@ const text = (page) => page.evaluate(() => document.body.innerText);
 
     // ---- driver: accept -> pick up -> deliver
     const v = await newPage(browser);
-    await login(v, 'driver@demo.com');
+    await login(v, mail('driver'));
     await v.waitForSelector('[data-act=dAccept]', { timeout: 15000 });
     await v.click('[data-act=dAccept]');
     await v.waitForSelector('[data-act=dPickup]');

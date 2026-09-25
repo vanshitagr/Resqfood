@@ -125,18 +125,19 @@ Nothing is required to run or demo the project — it works with no `.env` at al
 ### 10. Exact commands
 ```bash
 npm install
-npm run seed          # demo accounts across Jaipur, Delhi and Mumbai - password demo1234
-npm start             # http://localhost:3000  (migrations run automatically)
+npm start             # http://localhost:3000  (migrations run automatically; sign up to create accounts)
 
-npm test              # 35 backend end-to-end tests, in-memory DB, no network needed
+npm test              # 41 backend tests, in-memory DB, no network needed
 npm run check         # syntax + module load check
-npm run test:ui       # real-browser run of the whole flow (needs the server running)
+npm run test:ui       # real-browser run of the whole flow (registers its own throwaway accounts)
+npm run db:info       # read-only: which database, row counts, registered accounts
 ```
 
-**Demo the full flow** — three windows (one normal, two incognito):
-1. **Donor** (`donor@demo.com`) → *Donate food* → paste *"We have around 25 boxes of cooked rice and dal left from today's event. Good for about 2 hours."* → **Auto-fill the form** → **Find best recipient**. Point at the score breakdown and "engine took 0.8 ms".
-2. **NGO** (`ngo@demo.com`) → **Accept**.
-3. **Driver** (`driver@demo.com`) → **Accept task** → **Mark picked up** → **Mark delivered**.
+**Demo the full flow** — three windows (one normal, two private), signing up once in each as a
+donor, an NGO and a driver:
+1. **Donor** → *Post surplus* → paste *"We have around 25 boxes of cooked rice and dal left from today's event. Good for about 2 hours."* → **Auto-fill the form** → **Find match**.
+2. **NGO** → **Accept**.
+3. **Driver** → **Accept task** → **Mark picked up** → **Mark delivered**.
 4. **Donor** → DELIVERED with the full lifecycle history, then **Impact** and **Download report (CSV)**.
 
 **Test Google OAuth:**
