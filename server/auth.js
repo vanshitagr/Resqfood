@@ -6,7 +6,9 @@ const { HttpError } = require('./lib');
 let SECRET = process.env.JWT_SECRET;
 if (!SECRET) {
   if (process.env.NODE_ENV === 'production') {
-    throw new Error('JWT_SECRET must be set in production');
+    // Tagged so the serverless entry point can report which variable is missing instead of
+    // failing with an opaque FUNCTION_INVOCATION_FAILED. The message names no secret value.
+    throw Object.assign(new Error('JWT_SECRET must be set in production'), { code: 'CONFIG' });
   }
   SECRET = crypto.randomBytes(32).toString('hex'); // dev only: sessions reset on restart
   if (process.env.NODE_ENV !== 'test') {

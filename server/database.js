@@ -137,6 +137,16 @@ function postgresDriver() {
 
 // --------------------------------------------------------------- public API
 function createDatabase() {
+  // In production the SQLite fallback is always wrong: a serverless or container filesystem is
+  // read-only, so sqliteDriver() throws EROFS while creating data/, and even where the write
+  // succeeds the file is discarded on the next deploy. Fail loudly and name the variable rather
+  // than crashing deep inside fs.mkdirSync with an unrelated-looking error.
+  if (!process.env.DATABASE_URL && process.env.NODE_ENV === 'production') {
+    throw Object.assign(
+      new Error('DATABASE_URL must be set in production (the local SQLite fallback cannot be used there)'),
+      { code: 'CONFIG' }
+    );
+  }
   const driver = process.env.DATABASE_URL ? postgresDriver() : sqliteDriver();
   const pg = driver.dialect === 'postgres';
 
